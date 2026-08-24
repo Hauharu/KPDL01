@@ -1,4 +1,3 @@
-# BÍ KÍP ÔN THI TRỌNG TÂM: LAB 05 (PHÂN LOẠI & LỰA CHỌN ĐẶC TRƯNG)
 
 Bài thi hôm nay của bạn sẽ tương tự Lab 05, tức là tập trung vào **tiền xử lý phức tạp, vẽ Heatmap, dùng các thuật toán lựa chọn đặc trưng (SelectKBest, Random Forest) và so sánh nhiều mô hình máy học (SVM, Decision Tree, Random Forest)**. 
 
@@ -8,55 +7,49 @@ Dưới đây là một bộ code mẫu hoàn chỉnh và liền mạch từ tr�
 
 ## BƯỚC 1: TIỀN XỬ LÝ DỮ LIỆU & EDA CƠ BẢN (Yêu cầu 1 & 2)
 
-Đầu tiên, luôn phải làm sạch dữ liệu và biến đổi toàn bộ chữ thành số.
+> [!TIP] 
+> **MẸO DÙNG CHUNG BẤT CHẤP MỌI ĐỀ BÀI:**
+> Bạn chỉ cần thay đổi 2 biến `TEN_FILE` và `COT_NHAN` dưới đây cho khớp với đề bài. Toàn bộ code từ Bước 2 trở đi sẽ tự động chạy đúng mà không cần sửa thêm chữ nào!
 
 ```python
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+from sklearn.preprocessing import LabelEncoder
+
+# ==========================================
+# CHỈ CẦN THAY ĐỔI 2 GIÁ TRỊ NÀY KHI THI:
+TEN_FILE = 'bank-full.csv'
+COT_NHAN = 'y'
+# ==========================================
 
 # 1. Đọc dữ liệu
-df = pd.read_csv('bank-full.csv')
+df = pd.read_csv(TEN_FILE)
 
 # 2. Xử lý NaN và Trùng lặp
-print("Số dòng khuyết:\n", df.isnull().sum())
-df = df.dropna()
+df = df.dropna().drop_duplicates()
 
-print("Số dòng trùng lặp:", df.duplicated().sum())
-df = df.drop_duplicates()
-
-# 3. Mã hóa dữ liệu (TỰ VIẾT MAP HOẶC DÙNG LABEL ENCODER)
-# Cột nhị phân (Yes/No)
-binary_map = {'yes': 1, 'no': 0}
-for col in ['housing', 'loan', 'y']:
-    if col in df.columns:
-        df[col] = df[col].map(binary_map)
-
-# Cột có thứ tự (Ordinal)
-edu_map = {'unknown': 0, 'primary': 1, 'secondary': 2, 'tertiary': 3}
-if 'education' in df.columns:
-    df['education'] = df['education'].map(edu_map)
-
-# Đối với các cột chuỗi không thứ tự còn lại -> dùng Label Encoder
-from sklearn.preprocessing import LabelEncoder
+# 3. Mã hóa dữ liệu TỰ ĐỘNG (Không cần viết tay map)
+# Đoạn code này sẽ tự tìm tất cả các cột chứa chữ và ép về số
 categorical_cols = df.select_dtypes(include=['object', 'string']).columns
 le = LabelEncoder()
 for col in categorical_cols:
     df[col] = le.fit_transform(df[col])
 
-# Xóa các cột định danh hoặc ít ý nghĩa (nếu đề yêu cầu)
-# df = df.drop(columns=['job', 'day', 'month'])
+# Xóa các cột định danh hoặc ít ý nghĩa (Nếu đề yêu cầu, vd: ID, Ngày tháng)
+# df = df.drop(columns=['id_khach_hang'])
+
 
 # 4. Thống kê số lượng khách hàng
 print('Tổng số lượng khách hàng: ', len(df))
-print('Số lượng khách hàng từng lớp y:\n', df['y'].value_counts())
+print(f'Số lượng khách hàng từng lớp {COT_NHAN}:\n', df[COT_NHAN].value_counts())
 
-# Vẽ biểu đồ Bar Chart cho lớp y
-class_counts = df['y'].value_counts()
+# Vẽ biểu đồ Bar Chart cho lớp kết quả
+class_counts = df[COT_NHAN].value_counts()
 plt.figure(figsize=(7, 5))
 plt.bar(class_counts.index.astype(str), class_counts.values, color=['skyblue', 'salmon'])
-plt.title('Số lượng khách hàng theo lớp Y')
-plt.xlabel('Lớp (0 = No, 1 = Yes)')
+plt.title(f'Số lượng khách hàng theo lớp {COT_NHAN}')
+plt.xlabel('Lớp phân loại')
 plt.ylabel('Số lượng')
 plt.show()
 ```
@@ -65,12 +58,12 @@ plt.show()
 
 ## BƯỚC 2: MA TRẬN TƯƠNG QUAN & HEATMAP (Yêu cầu 3)
 
-Bước này giúp ta nhìn bằng mắt thường xem những cột nào có ảnh hưởng mạnh nhất tới cột kết quả (`y`), từ đó đề xuất ra một bộ thuộc tính.
+Bước này giúp ta nhìn bằng mắt thường xem những cột nào có ảnh hưởng mạnh nhất tới cột kết quả, từ đó đề xuất ra một bộ thuộc tính.
 
 ```python
-# Tách X và y
-X = df.drop(columns=['y'])
-y = df['y']
+# Tách X và y tự động dựa vào biến COT_NHAN đã khai báo ở trên
+X = df.drop(columns=[COT_NHAN])
+y = df[COT_NHAN]
 
 # Tính ma trận tương quan (chỉ tính trên các cột số)
 corr_matrix = df.corr(numeric_only=True)
